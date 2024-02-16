@@ -14,8 +14,8 @@ public class kmeanstest {
             mac or linux: update the path like "file:///Users/.../projectDirectory/data.txt"
         */
 
-        input[0] = "/Users/sydneypeno/Kmeans/dataset.csv";
-        input[1] = "/Users/sydneypeno/Kmeans/output";
+        input[0] = "D:\\IntellijProjects\\CS4433-Proj2-KMeans\\dataset.csv";
+        input[1] = "D:\\IntellijProjects\\CS4433-Proj2-KMeans\\output";
 
         single wc = new single();
         wc.debug(input);
