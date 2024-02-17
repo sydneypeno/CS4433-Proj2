@@ -24,13 +24,15 @@ public class single {
     // 1 MR job:
     // Mapper assigns each data point to new centroid
     // Reducer calculates new centroids based on the assigned points
-    public static class singleMapper extends Mapper<Object, Text, Object, Text>{
+    public static class singleMapper extends Mapper<Object, Text, IntWritable, Text>{
 
         private Text result = new Text();
+        private IntWritable keyOut = new IntWritable(0);
         private HashMap<Integer, String> centroids = new HashMap<>();
 
         @Override
         protected void setup(Context context) throws IOException, InterruptedException {
+//            System.out.println("setup");
             URI[] cacheFiles = context.getCacheFiles();
             Path path = new Path(cacheFiles[0]);
             FileSystem fs = FileSystem.get(context.getConfiguration());
@@ -54,9 +56,8 @@ public class single {
         public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
             String data = value.toString();
             String[] coords = data.split(",");
-            int k = 0;
+            Integer k = 0;
             double minimumDist = 1000000;
-
             //cycles through centroids to find which centroid is closest to that point
 
             for (int i = 0; i < centroids.size(); i++){
@@ -74,26 +75,26 @@ public class single {
                     k = i;
                 }
             }
-
+            keyOut.set(k);
             result.set(data);
-            context.write(k, result);
+//            System.out.println("Test");
+            context.write(keyOut, result);
         }
     }
 
     public static class singleReducer
-            extends Reducer<Object,Text,Text,NullWritable> {
+            extends Reducer<IntWritable,Text,Text,NullWritable> {
 
         private Text RedResult = new Text();
 
         //comment for commit
-        public void reduce(Object key, Iterable<Text> value, Context context
+        public void reduce(IntWritable key, Iterable<Text> value, Context context
         ) throws IOException, InterruptedException {
             //average out xs and ys
             //return centroid key with new x and ys
             int sumx = 0;
             int sumy = 0;
             int pointCount = 0;
-
             for (Text val: value){
                 pointCount++;
 
@@ -111,7 +112,6 @@ public class single {
             int yCenter = sumy / pointCount;
 
             RedResult.set(xCenter + "," + yCenter);
-
             context.write(RedResult, NullWritable.get());
         }
     }
@@ -123,23 +123,25 @@ public class single {
         job.setJarByClass(single.class);
 
         job.setMapperClass(singleMapper.class);
-        job.setMapOutputKeyClass(Object.class);
+        job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(Text.class);
+//        job.setOutputKeyClass(IntWritable.class);
+//        job.setOutputValueClass(Text.class);
+        //job.setNumReduceTasks(0);
 
         job.setReducerClass(singleReducer.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(NullWritable.class);
 
-        //job.setOutputKeyClass(Object.class);
-        //job.setOutputValueClass(Text.class);
-        //job.setNumReduceTasks(0);
 
-        job.addCacheFile(new URI("file:///D:/IntellijProjects/CS4433-Proj2-KMeans/seed_points.csv"));
+        job.addCacheFile(new URI("file:///B://GithubB//CS4433-Proj2//seed_points.csv"));
 
 
         FileInputFormat.addInputPath(job, new Path(args[0]));
         FileOutputFormat.setOutputPath(job, new Path(args[1]));
 
         System.exit(job.waitForCompletion(true) ? 0 : 1);
+        //Exit code 0 is successful completion
+        //Exit code 1 is non-successful completion - check to make sure that both the reducer and mapper are being called
     }
 }
