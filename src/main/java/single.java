@@ -87,7 +87,6 @@ public class single {
 
         private Text RedResult = new Text();
 
-        //comment for commit
         public void reduce(IntWritable key, Iterable<Text> value, Context context
         ) throws IOException, InterruptedException {
             //average out xs and ys
@@ -116,32 +115,45 @@ public class single {
         }
     }
 
-    public void debug(String[] args) throws Exception {
+    public void KMeansIteration(String[] args, int iter) throws Exception {
         Configuration conf = new Configuration();
-        Job job = Job.getInstance(conf, "kmeans");
+        Job job = Job.getInstance(conf, "kmeans" + iter);
 
         job.setJarByClass(single.class);
 
         job.setMapperClass(singleMapper.class);
         job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(Text.class);
-//        job.setOutputKeyClass(IntWritable.class);
-//        job.setOutputValueClass(Text.class);
-        //job.setNumReduceTasks(0);
 
         job.setReducerClass(singleReducer.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(NullWritable.class);
 
+        String in = "file:///D://IntellijProjects//CS4433-Proj2-KMeans//seed_points.csv";
 
-        job.addCacheFile(new URI("file:///B://GithubB//CS4433-Proj2//seed_points.csv"));
+        if (iter > 0) {
+            in = "file:///D://IntellijProjects//CS4433-Proj2-KMeans//output//centroid_" + (iter - 1) + "//part-r-00000";
+        }
 
+        String out = "file:///D://IntellijProjects//CS4433-Proj2-KMeans//output//centroid_" + iter;
+
+        job.addCacheFile(new URI(in));
 
         FileInputFormat.addInputPath(job, new Path(args[0]));
-        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+        FileOutputFormat.setOutputPath(job, new Path(out));
 
-        System.exit(job.waitForCompletion(true) ? 0 : 1);
-        //Exit code 0 is successful completion
-        //Exit code 1 is non-successful completion - check to make sure that both the reducer and mapper are being called
+        job.waitForCompletion(true);
+
+    }
+
+    public void Iterator(String[] args, int n) throws Exception {
+        int i =0;
+        while (i < n){
+            KMeansIteration(args, i);
+            i++;
+        }
+
     }
 }
+
+

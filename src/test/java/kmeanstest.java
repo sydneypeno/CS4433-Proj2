@@ -19,14 +19,14 @@ public class kmeanstest {
             mac or linux: update the path like "file:///Users/.../projectDirectory/data.txt"
         */
 
-        input[0] = "B:\\GithubB\\CS4433-Proj2\\dataset.csv";
-        input[1] = "B:\\GithubB\\CS4433-Proj2\\output";
+        input[0] = "D:\\IntellijProjects\\CS4433-Proj2-KMeans\\dataset.csv";
+        input[1] = "D:\\IntellijProjects\\CS4433-Proj2-KMeans\\output";
         // make sure to change the jar path as well in the single.java class!
 
 
-        FileUtils.deleteDirectory(new File(input[1]));
+        //FileUtils.deleteDirectory(new File(input[1]));
         single wc = new single();
-        wc.debug(input);
+        wc.Iterator(input, 4);
     }
 
 }
