@@ -26,7 +26,7 @@ public class kmeanstest {
 
         //FileUtils.deleteDirectory(new File(input[1]));
         single wc = new single();
-        wc.Iterator(input, 4);
+        wc.Iterator(input, 10);
     }
 
 }
