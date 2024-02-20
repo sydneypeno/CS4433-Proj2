@@ -2,7 +2,6 @@ import java.io.*;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.Scanner;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -26,7 +25,7 @@ public class optimization {
     // 1 MR job:
     // Mapper assigns each data point to new centroid
     // Reducer calculates new centroids based on the assigned points
-    public static class optimizationMapper extends Mapper<Object, Text, IntWritable, Text>{
+    public static class OptimizationMapper extends Mapper<Object, Text, IntWritable, Text>{
 
         private Text result = new Text();
         private IntWritable keyOut = new IntWritable(0);
@@ -84,13 +83,14 @@ public class optimization {
         }
     }
 
-    public static class optimizationReducer
+    public static class OptimizationReducer
             extends Reducer<IntWritable,Text,Text,NullWritable> {
+
 
         public void reduce(IntWritable key, Iterable<Text> value, Context context
         ) throws IOException, InterruptedException {
             //create new instance for hashmaps
-            System.out.println("Reducer Entered");
+            System.out.println("Reducer entered");
             Text RedResult = new Text();
             IntWritable keyInstance = new IntWritable();
             keyInstance.set(key.get());
@@ -101,43 +101,49 @@ public class optimization {
             int pointCount = 0;
             for (Text val: value){
 
-
-                String data = val.toString();
-                boolean fromCombiner = val.charAt(0) == 'C';
-                if(fromCombiner){ data = data.substring(1);}
-
+                String data = val.toString().trim();
+                System.out.println(data);
+//                System.out.println(data.charAt(0));
+                boolean isCombiner = data.charAt(0) == 'C';
+                System.out.println(isCombiner);
+                if(isCombiner) {data = data.substring(1);
+//                    System.out.println("Changed:" + val.toString());
+                }
                 String[] coord = data.split(",");
 
                 int px = Integer.parseInt(coord[0]);
                 int py = Integer.parseInt(coord[1]);
-                if(!fromCombiner){
-
-                sumx = sumx + px;
-                sumy = sumy + py;
-                pointCount++;
-                }else{
-                    System.out.println("Combiner Record Found:" + value);
+                System.out.println("1");
+                if(isCombiner) {
+//                    System.out.println("NOT COMBINER");
+                    sumx = sumx + px;
+                    sumy = sumy + py;
+                    pointCount++;
+                }
+                else{
+                    System.out.println("COMBINER ENTRY");
+                    coord = data.substring(1).split(",");
                     int mult = Integer.parseInt(coord[2]);
                     sumx = sumx + (px * mult);
                     sumy = sumy + (py * mult);
                     pointCount+= mult;
                 }
+//                System.out.println("OUT");
             }
 
             int xCenter = sumx / pointCount;
             int yCenter = sumy / pointCount;
 
             RedResult.set(xCenter + "," + yCenter);
-            System.out.println("Reducer:key: " + keyInstance);
-            System.out.println("Reducer:coords: " + RedResult);
+            System.out.println("key: " + keyInstance);
+            System.out.println("Coords: " + RedResult);
             CurrentCentroid.put(keyInstance, RedResult);
             context.write(RedResult, NullWritable.get());
         }
     }
-
-
     public static class optimizationCombiner
             extends Reducer<IntWritable,Text,IntWritable,Text> {
+
         public void reduce(IntWritable key, Iterable<Text> value, Context context
         ) throws IOException, InterruptedException {
             //create new instance for hashmaps
@@ -152,21 +158,17 @@ public class optimization {
             int pointCount = 0;
             for (Text val: value){
 
-
                 String data = val.toString();
-                boolean fromCombiner = val.charAt(0) == 'C';
-                if(fromCombiner){ data = data.substring(1);}
-
                 String[] coord = data.split(",");
-
                 int px = Integer.parseInt(coord[0]);
                 int py = Integer.parseInt(coord[1]);
-                if(!fromCombiner){
-
+                if(data.charAt(0) != 'C') {
                     sumx = sumx + px;
                     sumy = sumy + py;
                     pointCount++;
-                }else{
+                }
+                else{
+                    coord = data.substring(1).split(",");
                     int mult = Integer.parseInt(coord[2]);
                     sumx = sumx + (px * mult);
                     sumy = sumy + (py * mult);
@@ -177,7 +179,7 @@ public class optimization {
             int xCenter = sumx / pointCount;
             int yCenter = sumy / pointCount;
 
-            RedResult.set('C' + xCenter + "," + yCenter + "," + pointCount);
+            RedResult.set("C" + xCenter + "," + yCenter + "," + pointCount);
             System.out.println("Combiner:key: " + keyInstance);
             System.out.println("Combiner:Coords: " + RedResult);
             context.write(keyInstance, RedResult);
@@ -185,9 +187,6 @@ public class optimization {
 
 
     }
-
-
-
 
     public double CalcCentroidDiff(HashMap<IntWritable, Text> prevCent, HashMap<IntWritable, Text> currCent){
         int n = prevCent.size();
@@ -245,13 +244,13 @@ public class optimization {
 
         job.setJarByClass(optimization.class);
 
-        job.setMapperClass(optimizationMapper.class);
+        job.setMapperClass(OptimizationMapper.class);
         job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(Text.class);
 
-        job.setCombinerClass((optimizationCombiner.class));
+        job.setCombinerClass(optimizationCombiner.class);
 
-        job.setReducerClass(optimizationReducer.class);
+        job.setReducerClass(OptimizationReducer.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(NullWritable.class);
 
@@ -261,7 +260,7 @@ public class optimization {
             in = "file:///B://GithubB//CS4433-Proj2//output//centroid_" + (iter - 1) + "//part-r-00000";
         }
 
-        String out = "file:///://GithubB//CS4433-Proj2//output//centroid_" + iter;
+        String out = "file:///B://GithubB//CS4433-Proj2//output//centroid_" + iter;
 
         job.addCacheFile(new URI(in));
 

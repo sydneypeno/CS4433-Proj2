@@ -2,7 +2,6 @@ import java.io.*;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.Scanner;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -176,7 +175,7 @@ public class advmulti {
         Configuration conf = new Configuration();
         Job job = Job.getInstance(conf, "kmeans" + iter);
 
-        job.setJarByClass(advmulti.class);
+        job.setJarByClass(optimization.class);
 
         job.setMapperClass(advmultiMapper.class);
         job.setMapOutputKeyClass(IntWritable.class);
@@ -186,13 +185,13 @@ public class advmulti {
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(NullWritable.class);
 
-        String in = "file:///D://IntellijProjects//CS4433-Proj2-KMeans//seed_points.csv";
+        String in = "file:///B://GithubB//CS4433-Proj2//seed_points.csv";
 
         if (iter > 0) {
-            in = "file:///D://IntellijProjects//CS4433-Proj2-KMeans//output//centroid_" + (iter - 1) + "//part-r-00000";
+            in = "file:///B://GithubB//CS4433-Proj2//output//centroid_" + (iter - 1) + "//part-r-00000";
         }
 
-        String out = "file:///D://IntellijProjects//CS4433-Proj2-KMeans//output//centroid_" + iter;
+        String out = "file:///B://GithubB//CS4433-Proj2//output//centroid_" + iter;
 
         job.addCacheFile(new URI(in));
 
