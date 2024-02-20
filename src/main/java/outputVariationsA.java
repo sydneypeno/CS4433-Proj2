@@ -2,7 +2,6 @@ import java.io.*;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.Scanner;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -18,15 +17,17 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 //single-iteration Kmeans algorithm
 //(you can accomplish that by setting R=1)
 
-public class optimization {
+public class outputVariationsA {
 
     private static HashMap<IntWritable, Text> PreviousCentroid = new HashMap<>();
     private static HashMap<IntWritable, Text> CurrentCentroid = new HashMap<>();
 
+    private static boolean convergenceMet = true;
+
     // 1 MR job:
     // Mapper assigns each data point to new centroid
     // Reducer calculates new centroids based on the assigned points
-    public static class optimizationMapper extends Mapper<Object, Text, IntWritable, Text>{
+    public static class outputVariationsAMapper extends Mapper<Object, Text, IntWritable, Text>{
 
         private Text result = new Text();
         private IntWritable keyOut = new IntWritable(0);
@@ -84,7 +85,7 @@ public class optimization {
         }
     }
 
-    public static class optimizationReducer
+    public static class outputVariationsAReducer
             extends Reducer<IntWritable,Text,Text,NullWritable> {
 
         public void reduce(IntWritable key, Iterable<Text> value, Context context
@@ -114,10 +115,11 @@ public class optimization {
             int xCenter = sumx / pointCount;
             int yCenter = sumy / pointCount;
 
-            RedResult.set(xCenter + "," + yCenter);
+            RedResult.set(xCenter + "," + yCenter + "," + (convergenceMet ? "No" : "Yes"));
             System.out.println("key: " + keyInstance);
             System.out.println("Coords: " + RedResult);
             CurrentCentroid.put(keyInstance, RedResult);
+
             context.write(RedResult, NullWritable.get());
         }
     }
@@ -176,13 +178,13 @@ public class optimization {
         Configuration conf = new Configuration();
         Job job = Job.getInstance(conf, "kmeans" + iter);
 
-        job.setJarByClass(optimization.class);
+        job.setJarByClass(outputVariationsA.class);
 
-        job.setMapperClass(optimizationMapper.class);
+        job.setMapperClass(outputVariationsAMapper.class);
         job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(Text.class);
 
-        job.setReducerClass(optimizationReducer.class);
+        job.setReducerClass(outputVariationsAReducer.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(NullWritable.class);
 
@@ -218,14 +220,22 @@ public class optimization {
             //place current centroid in previous and create new current centroid
             PreviousCentroid = CurrentCentroid;
             CurrentCentroid = new HashMap<>();
+
             i++;
             //current centroid is filled in the reducer
             KMeansIteration(args, i);
-            System.out.println("Previous centroid: " + PreviousCentroid);
-            System.out.println("Current centroid: " + CurrentCentroid);
-
+            System.out.println("Previous Centroid: " + PreviousCentroid);
+            System.out.println("Current Centroid: " + CurrentCentroid);
 
         }
+        convergenceMet = ConvergenceCheck(threshohld);
+        PreviousCentroid = CurrentCentroid;
+        CurrentCentroid = new HashMap<>();
+        i++;
+        //current centroid is filled in the reducer
+        KMeansIteration(args, i);
+
+
         System.out.println("------End of Iteration------");
 
     }

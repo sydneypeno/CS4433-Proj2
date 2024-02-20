@@ -18,7 +18,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 //single-iteration Kmeans algorithm
 //(you can accomplish that by setting R=1)
 
-public class optimization {
+public class outputVariationsB {
 
     private static HashMap<IntWritable, Text> PreviousCentroid = new HashMap<>();
     private static HashMap<IntWritable, Text> CurrentCentroid = new HashMap<>();
@@ -26,7 +26,7 @@ public class optimization {
     // 1 MR job:
     // Mapper assigns each data point to new centroid
     // Reducer calculates new centroids based on the assigned points
-    public static class optimizationMapper extends Mapper<Object, Text, IntWritable, Text>{
+    public static class outputVariationsBMapper extends Mapper<Object, Text, IntWritable, Text>{
 
         private Text result = new Text();
         private IntWritable keyOut = new IntWritable(0);
@@ -84,7 +84,7 @@ public class optimization {
         }
     }
 
-    public static class optimizationReducer
+    public static class outputVariationsBReducer
             extends Reducer<IntWritable,Text,Text,NullWritable> {
 
         public void reduce(IntWritable key, Iterable<Text> value, Context context
@@ -118,7 +118,15 @@ public class optimization {
             System.out.println("key: " + keyInstance);
             System.out.println("Coords: " + RedResult);
             CurrentCentroid.put(keyInstance, RedResult);
-            context.write(RedResult, NullWritable.get());
+
+            for (Text v: value){
+                String data = v.toString();
+                String[] coordV = data.split(",");
+
+                context.write(new Text(xCenter + "," + yCenter +"," + coordV[0] + "," + coordV[1]), NullWritable.get());
+            }
+
+            //context.write(RedResult, NullWritable.get()) ;
         }
     }
 
@@ -176,15 +184,16 @@ public class optimization {
         Configuration conf = new Configuration();
         Job job = Job.getInstance(conf, "kmeans" + iter);
 
-        job.setJarByClass(optimization.class);
+        job.setJarByClass(outputVariationsB.class);
 
-        job.setMapperClass(optimizationMapper.class);
+        job.setMapperClass(outputVariationsBMapper.class);
         job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(Text.class);
 
-        job.setReducerClass(optimizationReducer.class);
+        job.setReducerClass(outputVariationsBReducer.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(NullWritable.class);
+
 
         String in = "file:///D://IntellijProjects//CS4433-Proj2-KMeans//seed_points.csv";
 
@@ -200,7 +209,6 @@ public class optimization {
         FileOutputFormat.setOutputPath(job, new Path(out));
 
         job.waitForCompletion(true);
-
     }
 
     public void Iterator(String[] args, int n) throws Exception {
@@ -223,7 +231,6 @@ public class optimization {
             KMeansIteration(args, i);
             System.out.println("Previous centroid: " + PreviousCentroid);
             System.out.println("Current centroid: " + CurrentCentroid);
-
 
         }
         System.out.println("------End of Iteration------");
