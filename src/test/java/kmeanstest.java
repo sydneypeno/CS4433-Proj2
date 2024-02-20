@@ -23,10 +23,9 @@ public class kmeanstest {
         input[1] = "D:\\IntellijProjects\\CS4433-Proj2-KMeans\\output";
         // make sure to change the jar path as well in the single.java class!
 
-
         //FileUtils.deleteDirectory(new File(input[1]));
-        multi wc = new multi();
-        wc.Iterator(input, 5);
+        outputVariationsB wc = new outputVariationsB();
+        wc.Iterator(input, 14);
     }
 
 }
