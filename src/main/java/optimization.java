@@ -90,6 +90,7 @@ public class optimization {
         public void reduce(IntWritable key, Iterable<Text> value, Context context
         ) throws IOException, InterruptedException {
             //create new instance for hashmaps
+            System.out.println("Reducer Entered");
             Text RedResult = new Text();
             IntWritable keyInstance = new IntWritable();
             keyInstance.set(key.get());
@@ -99,28 +100,94 @@ public class optimization {
             int sumy = 0;
             int pointCount = 0;
             for (Text val: value){
-                pointCount++;
+
 
                 String data = val.toString();
+                boolean fromCombiner = val.charAt(0) == 'C';
+                if(fromCombiner){ data = data.substring(1);}
+
                 String[] coord = data.split(",");
 
                 int px = Integer.parseInt(coord[0]);
                 int py = Integer.parseInt(coord[1]);
+                if(!fromCombiner){
 
                 sumx = sumx + px;
                 sumy = sumy + py;
+                pointCount++;
+                }else{
+                    System.out.println("Combiner Record Found:" + value);
+                    int mult = Integer.parseInt(coord[2]);
+                    sumx = sumx + (px * mult);
+                    sumy = sumy + (py * mult);
+                    pointCount+= mult;
+                }
             }
 
             int xCenter = sumx / pointCount;
             int yCenter = sumy / pointCount;
 
             RedResult.set(xCenter + "," + yCenter);
-            System.out.println("key: " + keyInstance);
-            System.out.println("Coords: " + RedResult);
+            System.out.println("Reducer:key: " + keyInstance);
+            System.out.println("Reducer:coords: " + RedResult);
             CurrentCentroid.put(keyInstance, RedResult);
             context.write(RedResult, NullWritable.get());
         }
     }
+
+
+    public static class optimizationCombiner
+            extends Reducer<IntWritable,Text,IntWritable,Text> {
+        public void reduce(IntWritable key, Iterable<Text> value, Context context
+        ) throws IOException, InterruptedException {
+            //create new instance for hashmaps
+//            System.out.println("Combiner Entered");
+            Text RedResult = new Text();
+            IntWritable keyInstance = new IntWritable();
+            keyInstance.set(key.get());
+            //average out xs and ys
+            //return centroid key with new x and ys
+            int sumx = 0;
+            int sumy = 0;
+            int pointCount = 0;
+            for (Text val: value){
+
+
+                String data = val.toString();
+                boolean fromCombiner = val.charAt(0) == 'C';
+                if(fromCombiner){ data = data.substring(1);}
+
+                String[] coord = data.split(",");
+
+                int px = Integer.parseInt(coord[0]);
+                int py = Integer.parseInt(coord[1]);
+                if(!fromCombiner){
+
+                    sumx = sumx + px;
+                    sumy = sumy + py;
+                    pointCount++;
+                }else{
+                    int mult = Integer.parseInt(coord[2]);
+                    sumx = sumx + (px * mult);
+                    sumy = sumy + (py * mult);
+                    pointCount+= mult;
+                }
+            }
+
+            int xCenter = sumx / pointCount;
+            int yCenter = sumy / pointCount;
+
+            RedResult.set('C' + xCenter + "," + yCenter + "," + pointCount);
+            System.out.println("Combiner:key: " + keyInstance);
+            System.out.println("Combiner:Coords: " + RedResult);
+            context.write(keyInstance, RedResult);
+        }
+
+
+    }
+
+
+
 
     public double CalcCentroidDiff(HashMap<IntWritable, Text> prevCent, HashMap<IntWritable, Text> currCent){
         int n = prevCent.size();
@@ -182,19 +249,19 @@ public class optimization {
         job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(Text.class);
 
-        job.setCombinerClass((optimizationReducer.class));
+        job.setCombinerClass((optimizationCombiner.class));
 
         job.setReducerClass(optimizationReducer.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(NullWritable.class);
 
-        String in = "file:///D://IntellijProjects//CS4433-Proj2-KMeans//seed_points.csv";
+        String in = "file:///B://GithubB//CS4433-Proj2//seed_points.csv";
 
         if (iter > 0) {
-            in = "file:///D://IntellijProjects//CS4433-Proj2-KMeans//output//centroid_" + (iter - 1) + "//part-r-00000";
+            in = "file:///B://GithubB//CS4433-Proj2//output//centroid_" + (iter - 1) + "//part-r-00000";
         }
 
-        String out = "file:///D://IntellijProjects//CS4433-Proj2-KMeans//output//centroid_" + iter;
+        String out = "file:///://GithubB//CS4433-Proj2//output//centroid_" + iter;
 
         job.addCacheFile(new URI(in));
 
