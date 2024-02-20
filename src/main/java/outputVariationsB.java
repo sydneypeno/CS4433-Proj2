@@ -3,6 +3,8 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Scanner;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -85,49 +87,54 @@ public class outputVariationsB {
     }
 
     public static class outputVariationsBReducer
-            extends Reducer<IntWritable,Text,Text,NullWritable> {
+            extends Reducer<IntWritable,Text,Text,Text> {
 
-        public void reduce(IntWritable key, Iterable<Text> value, Context context
-        ) throws IOException, InterruptedException {
-            //create new instance for hashmaps
-            Text RedResult = new Text();
-            IntWritable keyInstance = new IntWritable();
-            keyInstance.set(key.get());
-            //average out xs and ys
-            //return centroid key with new x and ys
+        private Text outputKey = new Text();
+        private Text outputValue = new Text();
+
+        public void reduce(IntWritable key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+            List<String> dataPoints = new ArrayList<>();
+
             int sumx = 0;
             int sumy = 0;
             int pointCount = 0;
-            for (Text val: value){
-                pointCount++;
 
-                String data = val.toString();
+            // Iterate through values to calculate centroid and collect data points
+            for (Text val : values) {
+                String data = val.toString().trim();
+                boolean isCombiner = data.charAt(0) == 'C';
+
                 String[] coord = data.split(",");
-
                 int px = Integer.parseInt(coord[0]);
                 int py = Integer.parseInt(coord[1]);
 
-                sumx = sumx + px;
-                sumy = sumy + py;
+                if (isCombiner) {
+                    sumx = Integer.parseInt(coord[1]);
+                    sumy = Integer.parseInt(coord[2]);
+                    pointCount = Integer.parseInt(coord[3]);
+                } else {
+                    dataPoints.add(data);
+                }
             }
 
             int xCenter = sumx / pointCount;
             int yCenter = sumy / pointCount;
 
-            RedResult.set(xCenter + "," + yCenter);
-            System.out.println("key: " + keyInstance);
-            System.out.println("Coords: " + RedResult);
-            CurrentCentroid.put(keyInstance, RedResult);
+            // Output centroid
+            outputKey.set("Centroid");
+            outputValue.set(xCenter + "," + yCenter);
+            context.write(outputKey, outputValue);
 
-            for (Text v: value){
-                String data = v.toString();
-                String[] coordV = data.split(",");
-
-                context.write(new Text(xCenter + "," + yCenter +"," + coordV[0] + "," + coordV[1]), NullWritable.get());
+            // Output data points assigned to the centroid
+            outputKey.set("Cluster " + key);
+            for (String point : dataPoints) {
+                outputValue.set(point);
+                context.write(outputKey, outputValue);
             }
+        }
 
             //context.write(RedResult, NullWritable.get()) ;
-        }
+
     }
 
     public double CalcCentroidDiff(HashMap<IntWritable, Text> prevCent, HashMap<IntWritable, Text> currCent){
@@ -143,7 +150,7 @@ public class outputVariationsB {
             int xPC = Integer.parseInt(coordsPC[0]);
             int yPC = Integer.parseInt(coordsPC[1]);
 
-            //get current centroid coordinat
+            //get current centroid coordinates
             Text cc = currCent.get(new IntWritable(i));
             String dataCC = cc.toString();
             String[] coordsCC = dataCC.split(",");
@@ -192,7 +199,7 @@ public class outputVariationsB {
 
         job.setReducerClass(outputVariationsBReducer.class);
         job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(NullWritable.class);
+        job.setOutputValueClass(Text.class);
 
 
         String in = "file:///D://IntellijProjects//CS4433-Proj2-KMeans//seed_points.csv";
