@@ -175,7 +175,7 @@ public class advmulti {
         Configuration conf = new Configuration();
         Job job = Job.getInstance(conf, "kmeans" + iter);
 
-        job.setJarByClass(optimization.class);
+        job.setJarByClass(advmulti.class);
 
         job.setMapperClass(advmultiMapper.class);
         job.setMapOutputKeyClass(IntWritable.class);
